@@ -1,33 +1,43 @@
-name: Publish Packages
+name: Pre release
+
 on:
-  workflow_dispatch:
-  release:
-    types: [ created ]
   push:
-    tags:
-      - '*'
+    branches:
+      - master
+  workflow_dispatch:
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  build:
+    name: Gradle-Build
+    runs-on: ubuntu-20.04
     steps:
-
-      - name: Checkout latest code
+      - name: Checkout
         uses: actions/checkout@v2
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v2
+      
+      # Setup JDK
+      - name: Setup Java JDK
+        uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
           java-version: 21
-
-      - name: Change wrapper permissions
+          distribution: 'zulu'
+          cache: 'gradle'
+        
+      # Build
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
+      - name: Build with Gradle
+        run: ./gradlew build
 
-      - name: Publish package
-        uses: gradle/gradle-build-action@v2
+      # Auto release
+      - name: Auto release
+        uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          arguments: publish
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: latest
+          prerelease: true
+          files: |
+            eco-core/core-stub/build/libs/core-stub-*.jar
+            eco-core/core-plugin/build/libs/core-plugin-*.jar
+            eco-core/core-proxy/build/libs/core-proxy-*.jar
+            bin/*.jar
+            LICENSE
